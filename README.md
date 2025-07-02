@@ -26,3 +26,7 @@
 
 8.cd到你的项目目录中，wrangler deploy，发布成功后会在命令行中显示访问链接
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=QiuranQAQ/image-converter&type=Date)](https://www.star-history.com/#QiuranQAQ/image-converter&Date)
+
