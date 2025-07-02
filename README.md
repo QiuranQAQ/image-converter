@@ -8,7 +8,7 @@
 
 支持批量转换、质量设置和等比缩放，5个以上会自动打包zip，目前支持格式JPG、PNG、WebP、TIFF，支持HEIC导入
 
-Cloudflare worker部署流程
+##Cloudflare worker部署流程
 
 1.注册一个Cloudflare账号
 
