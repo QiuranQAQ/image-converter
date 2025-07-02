@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赛法利娅的诡计 ฅ՞˶･֊･˶՞ฅ</title>
+    <!-- Pico.css, JSZip, UTIF.js links -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <!-- 1. 新增 heic2any 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
+    <style>
+        /* 您的所有 CSS 样式保持不变 */
+        :root {
+            --gradient: linear-gradient(45deg, #8A2BE2, #40E0D0);
+        }
+        body { padding: 1rem; transition: background-color 0.3s ease; }
+        .container { max-width: 960px; }
+        .gradient-text { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
+        .theme-switcher { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 1rem; }
+        .theme-switcher label { margin: 0 0 0 0.5rem; }
+        .drop-zone { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1rem; min-height: 200px; border: 2px dashed var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 2rem; cursor: pointer; transition: all 0.2s ease-in-out; margin-bottom: 2rem; background-color: var(--pico-contrast-background); color: var(--pico-muted-color); }
+        .icon-upload { color: var(--pico-primary); }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--pico-primary); background-color: var(--pico-primary-focus); }
+        .drop-zone p { margin: 0; }
+        #file-list li { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background-color: var(--pico-card-background-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem; }
+        .remove-btn { background: none; border: none; color: var(--pico-muted-color); font-size: 1.5em; line-height: 1; padding: 0.25rem; cursor: pointer; transition: color 0.2s ease; flex-shrink: 0; margin-left: -0.75rem; width: 10%; }
+        .remove-btn:hover { color: var(--pico-primary-hover); }
+        .file-preview-img { width: 50px; height: 50px; object-fit: cover; border-radius: var(--pico-border-radius); flex-shrink: 0; }
+        .file-details-wrapper { display: flex; justify-content: space-between; align-items: center; flex-grow: 1; min-width: 0; }
+        .file-info { flex-grow: 1; margin-right: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info-name { font-weight: bold; overflow: hidden; text-overflow: ellipsis; }
+        .file-info-details { font-size: 0.8em; color: var(--pico-muted-color); }
+        .file-status { font-style: italic; color: var(--pico-secondary); flex-shrink: 0; text-align: right; }
+        .grid-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .hidden { display: none; }
+        progress { width: 100%; }
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        #add-more-btn { display: inline-flex; align-items: center; gap: 1rem; width: 18%; height: 50px; }
+        #main-content { position: relative; }
+        #main-content.drag-over::before { content: '拖拽到这里添加更多文件'; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); color: white; font-size: 1.5rem; font-weight: bold; display: flex; justify-content: center; align-items: center; border-radius: var(--pico-border-radius); z-index: 10; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <nav class="theme-switcher">
+                ☀️
+                <input type="checkbox" id="theme-switch" name="theme-switch" role="switch">
+                🌙
+            </nav>
+            <h1 class="gradient-text">赛法利娅的诡计 ฅ՞˶･֊･˶՞ฅ</h1>
+            <p>批量转换、调整尺寸、支持多种格式。所有操作均在本地完成，保护您的隐私。</p>
+        </header>
+
+        <div id="upload-section">
+            <div id="drop-zone" class="drop-zone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <p>拖拽多个图片到这里，或点击选择文件</p>
+                <!-- 2. 更新 input 的 accept 属性 -->
+                <input type="file" id="file-input" accept="image/*,.heic,.heif" multiple hidden>
+            </div>
+        </div>
+
+        <div id="main-content" class="hidden">
+            <section>
+                <h2>转换设置</h2>
+                <div class="grid-controls">
+                    <label for="format-select">目标格式
+                        <select id="format-select"><option value="image/jpeg">JPEG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option><option value="image/tiff">TIFF</option></select>
+                    </label>
+                    <div id="quality-control">
+                        <label for="quality-slider">质量: <span id="quality-value">90</span>%</label>
+                        <input type="range" id="quality-slider" min="0" max="100" value="90">
+                    </div>
+                    <div>
+                        <label for="scale-slider">缩放比例: <span id="scale-value">100</span>%</label>
+                        <input type="range" id="scale-slider" min="10" max="200" value="100">
+                    </div>
+                </div>
+                <button id="convert-btn" class="contrast" style="margin-top: 1rem; width: 30%;">开始转换</button>
+            </section>
+
+            <section style="margin-top: 2rem;">
+                <div class="list-header">
+                    <h2>文件列表与进度</h2>
+                    <button id="add-more-btn" class="secondary outline">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>继续添加</span>
+                    </button>
+                </div>
+                <div id="progress-area" class="hidden">
+                    <progress id="progress-bar" value="0" max="100"></progress>
+                    <small id="progress-text"></small>
+                </div>
+                <ul id="file-list" style="list-style: none; padding: 0;"></ul>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const dom = {
+            html: document.documentElement,
+            themeSwitch: document.getElementById('theme-switch'),
+            dropZone: document.getElementById('drop-zone'),
+            fileInput: document.getElementById('file-input'),
+            uploadSection: document.getElementById('upload-section'),
+            mainContent: document.getElementById('main-content'),
+            fileListElem: document.getElementById('file-list'),
+            addMoreBtn: document.getElementById('add-more-btn'),
+            formatSelect: document.getElementById('format-select'),
+            qualityControl: document.getElementById('quality-control'),
+            qualitySlider: document.getElementById('quality-slider'),
+            qualityValue: document.getElementById('quality-value'),
+            scaleSlider: document.getElementById('scale-slider'),
+            scaleValue: document.getElementById('scale-value'),
+            convertBtn: document.getElementById('convert-btn'),
+            progressArea: document.getElementById('progress-area'),
+            progressBar: document.getElementById('progress-bar'),
+            progressText: document.getElementById('progress-text'),
+        };
+        
+        let fileList = new Map();
+
+        // --- 所有JS函数都已更新或保持不变 ---
+        function init() { /* ... no changes ... */ initTheme(); addEventListeners(); updateControlsUI(); }
+        function initTheme() { /* ... no changes ... */ const savedTheme = localStorage.getItem('theme') || 'dark'; dom.html.setAttribute('data-theme', savedTheme); dom.themeSwitch.checked = savedTheme === 'dark'; }
+        function handleThemeSwitch() { /* ... no changes ... */ const newTheme = dom.themeSwitch.checked ? 'dark' : 'light'; dom.html.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); }
+        function addEventListeners() { /* ... no changes ... */ dom.themeSwitch.addEventListener('change', handleThemeSwitch); dom.dropZone.addEventListener('click', () => dom.fileInput.click()); dom.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dom.dropZone.classList.add('drag-over'); }); dom.dropZone.addEventListener('dragleave', () => dom.dropZone.classList.remove('drag-over')); dom.dropZone.addEventListener('drop', (e) => { e.preventDefault(); dom.dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); }); dom.addMoreBtn.addEventListener('click', () => dom.fileInput.click()); dom.mainContent.addEventListener('dragover', (e) => { e.preventDefault(); dom.mainContent.classList.add('drag-over'); }); dom.mainContent.addEventListener('dragleave', (e) => { dom.mainContent.classList.remove('drag-over'); }); dom.mainContent.addEventListener('drop', (e) => { e.preventDefault(); dom.mainContent.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); }); dom.fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; }); dom.formatSelect.addEventListener('change', updateControlsUI); dom.qualitySlider.addEventListener('input', () => dom.qualityValue.textContent = dom.qualitySlider.value); dom.scaleSlider.addEventListener('input', () => dom.scaleValue.textContent = dom.scaleSlider.value); dom.convertBtn.addEventListener('click', startBatchConversion); dom.fileListElem.addEventListener('click', (e) => { const removeBtn = e.target.closest('.remove-btn'); if (removeBtn) { const id = removeBtn.dataset.id; fileList.delete(id); renderFileList(); if (fileList.size === 0) { showUploadView(); } } }); }
+        function showMainView() { /* ... no changes ... */ dom.uploadSection.classList.add('hidden'); dom.mainContent.classList.remove('hidden'); }
+        function showUploadView() { /* ... no changes ... */ dom.uploadSection.classList.remove('hidden'); dom.mainContent.classList.add('hidden'); }
+        function updateControlsUI() { /* ... no changes ... */ const selectedFormat = dom.formatSelect.value; dom.qualityControl.style.display = (selectedFormat === 'image/jpeg' || selectedFormat === 'image/webp') ? 'block' : 'none'; const buttonText = fileList.size > 5 ? '开始转换并下载 ZIP' : '开始转换并单独下载'; dom.convertBtn.textContent = buttonText; }
+
+        // --- 3. 核心改动：handleFiles 函数 ---
+        function handleFiles(files) {
+            const filePromises = Array.from(files)
+                .map(file => {
+                    const fileId = `${file.name}-${file.lastModified}`;
+                    if (fileList.has(fileId)) return null;
+
+                    const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+                    
+                    // 为普通图片和HEIC图片创建不同的处理Promise
+                    let promise;
+                    if (isHeic) {
+                        promise = heic2any({ blob: file, toType: "image/png" }) // 解码为PNG
+                            .then(pngBlob => readFileAsDataURL(pngBlob))
+                            .catch(err => {
+                                console.error(`HEIC解码失败: ${file.name}`, err);
+                                // 返回一个可识别的错误，以便后续过滤
+                                return { error: `解码失败: ${file.name}` };
+                            });
+                    } else if (file.type.startsWith('image/')) {
+                        promise = readFileAsDataURL(file);
+                    } else {
+                        return null; // 不支持的文件类型
+                    }
+
+                    return promise.then(result => {
+                        // 如果HEIC解码失败，则不添加
+                        if (result && result.error) {
+                            alert(result.error); // 提示用户
+                            return null;
+                        }
+                        // 成功后，将所有数据打包成一个对象
+                        return { file, status: '等待中', previewUrl: result, id: fileId };
+                    });
+                })
+                .filter(p => p !== null);
+
+            if (filePromises.length > 0) {
+                setLoadingState(true);
+                Promise.all(filePromises).then(results => {
+                    results.forEach(data => {
+                        // 过滤掉处理失败的结果
+                        if (data) {
+                            fileList.set(data.id, data);
+                        }
+                    });
+                    setLoadingState(false);
+                    if (fileList.size > 0) {
+                        if (dom.mainContent.classList.contains('hidden')) {
+                           showMainView();
+                        }
+                        renderFileList();
+                    }
+                });
+            }
+        }
+        
+        function setLoadingState(isLoading) {
+             const isFirstUpload = dom.mainContent.classList.contains('hidden');
+             if (isLoading) {
+                if (isFirstUpload) {
+                    dom.dropZone.textContent = "正在解码并加载预览...";
+                } else {
+                    dom.addMoreBtn.disabled = true;
+                    dom.addMoreBtn.querySelector('span').textContent = "加载中...";
+                }
+             } else {
+                if (isFirstUpload) {
+                    dom.dropZone.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><p>拖拽更多图片到这里，或点击选择文件</p>`;
+                } else {
+                    dom.addMoreBtn.disabled = false;
+                    dom.addMoreBtn.querySelector('span').textContent = "继续添加";
+                }
+             }
+        }
+
+        function readFileAsDataURL(blob) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = e => resolve(e.target.result); reader.onerror = reject; reader.readAsDataURL(blob); }); }
+        function formatBytes(bytes) { if (bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+        function renderFileList() { dom.fileListElem.innerHTML = ''; for (const [id, data] of fileList.entries()) { const li = document.createElement('li'); li.innerHTML = `<button class="remove-btn" data-id="${id}" title="移除文件">×</button><img src="${data.previewUrl}" class="file-preview-img" alt="Preview of ${data.file.name}"><div class="file-details-wrapper"><div class="file-info"><div class="file-info-name">${data.file.name}</div><div class="file-info-details">${data.file.type || 'image/heic'} - ${formatBytes(data.file.size)}</div></div><span class="file-status" data-status-id="${id}">${data.status}</span></div>`; dom.fileListElem.appendChild(li); } updateControlsUI(); }
+        function updateFileStatus(id, status, newSize = null) { const statusElem = document.querySelector(`[data-status-id="${id}"]`); if (statusElem) { statusElem.textContent = newSize ? `完成 (${formatBytes(newSize)})` : status; } }
+        
+        // --- 4. 核心改动：startBatchConversion 和 processSingleFile 函数 ---
+        async function startBatchConversion() {
+            dom.convertBtn.disabled = true;
+            dom.convertBtn.setAttribute('aria-busy', 'true');
+            dom.progressArea.classList.remove('hidden');
+            dom.progressBar.value = 0;
+
+            const processedFiles = [];
+            let processedCount = 0;
+            const totalFiles = fileList.size;
+            
+            const settings = {
+                format: dom.formatSelect.value,
+                quality: parseInt(dom.qualitySlider.value) / 100,
+                scale: parseInt(dom.scaleSlider.value) / 100
+            };
+            
+            for (const [id, data] of fileList.entries()) {
+                updateFileStatus(id, '处理中...');
+                dom.progressText.textContent = `正在处理: ${data.file.name}`;
+                try {
+                    // 传递 data.previewUrl 作为图像源
+                    const result = await processSingleFile(data.file, data.previewUrl, settings);
+                    processedFiles.push(result);
+                    updateFileStatus(id, '完成', result.blob.size);
+                } catch (error) {
+                    console.error('处理失败:', data.file.name, error);
+                    updateFileStatus(id, `失败: ${error.message}`);
+                }
+                processedCount++;
+                dom.progressBar.value = (processedCount / totalFiles) * 100;
+            }
+            
+            dom.progressText.textContent = '所有文件处理完成。准备下载...';
+            // 下载逻辑保持不变
+            if (processedFiles.length > 5) { /* ... ZIP download ... */ dom.progressText.textContent = '文件数量 > 5，正在生成 ZIP...'; const zip = new JSZip(); for (const file of processedFiles) { zip.file(file.newFileName, file.blob); } const zipBlob = await zip.generateAsync({ type: "blob" }); downloadBlob(zipBlob, 'converted_images.zip'); dom.progressText.textContent = 'ZIP 文件已下载！'; } else if (processedFiles.length > 0) { /* ... Individual download ... */ dom.progressText.textContent = `文件数量 ≤ 5，正在分别下载 ${processedFiles.length} 个文件...`; for (const file of processedFiles) { downloadBlob(file.blob, file.newFileName); } dom.progressText.textContent = '所有文件已单独下载！'; } else { dom.progressText.textContent = '没有成功转换的文件。'; }
+
+            dom.convertBtn.disabled = false;
+            dom.convertBtn.removeAttribute('aria-busy');
+        }
+
+        // 接受 previewUrl 作为图像源
+        function processSingleFile(originalFile, previewUrl, settings) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const newWidth = Math.round(img.width * settings.scale);
+                    const newHeight = Math.round(img.height * settings.scale);
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                    
+                    const originalName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
+                    const extension = settings.format.split('/')[1];
+                    const newFileName = `${originalName}_${newWidth}x${newHeight}.${extension}`;
+                    
+                    if (settings.format === 'image/tiff') {
+                        const rgba = ctx.getImageData(0, 0, newWidth, newHeight).data;
+                        const tiffArrayBuffer = UTIF.encodeImage(rgba, newWidth, newHeight);
+                        const blob = new Blob([tiffArrayBuffer], { type: 'image/tiff' });
+                        resolve({ blob, newFileName });
+                    } else {
+                        canvas.toBlob(
+                            (blob) => blob ? resolve({ blob, newFileName }) : reject(new Error('Canvas toBlob failed')),
+                            settings.format,
+                            settings.quality
+                        );
+                    }
+                };
+                img.onerror = () => reject(new Error('无法加载图片预览'));
+                // 核心：使用 previewUrl，因为它保证是可渲染的格式
+                img.src = previewUrl;
+            });
+        }
+        
+        function downloadBlob(blob, filename) { /* ... no changes ... */ const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+        
+        init();
+    </script>
+</body>
+</html>

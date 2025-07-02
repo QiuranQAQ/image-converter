@@ -1,0 +1,11 @@
+name = "image-converter"
+main = "src/index.js"
+compatibility_date = "2025-07-01"
+
+# 允许 Worker 读取项目中的 HTML 文件
+[site]
+bucket = "."
+
+[[routes]]
+pattern = "填写你的自定义域"
+custom_domain = true
